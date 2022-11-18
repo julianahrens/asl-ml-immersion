@@ -1,0 +1,38 @@
+name: Bigquery export
+inputs:
+- {name: table, type: Artifact}
+- {name: destination_uri, type: String}
+- {name: location, type: String, default: US, optional: true}
+implementation:
+  container:
+    image: python:3.8
+    command:
+    - sh
+    - -c
+    - |2
+
+      if ! [ -x "$(command -v pip)" ]; then
+          python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip
+      fi
+
+      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery' 'kfp==1.8.10' && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp -d)
+      printf "%s" "$0" > "$program_path/ephemeral_component.py"
+      python3 -m kfp.v2.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+    - "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing\
+      \ import *\n\ndef bigquery_export(\n    table: Input[Artifact],\n    destination_uri:\
+      \ str,\n    location: str = \"US\",\n):\n    # pylint: disable=import-outside-toplevel\n\
+      \    from google.cloud import bigquery\n\n    client = bigquery.Client()\n \
+      \   dataset_ref = bigquery.DatasetReference(table.metadata[\"projectId\"], table.metadata[\"\
+      datasetId\"])\n    table_ref = dataset_ref.table(table.metadata[\"tableId\"\
+      ])\n\n    extract_job = client.extract_table(\n        table_ref,\n        destination_uri,\n\
+      \        # Location must match that of the source table.\n        location=location,\n\
+      \    )  # API request\n    extract_job.result() \n\n"
+    args:
+    - --executor_input
+    - {executorInput: null}
+    - --function_to_execute
+    - bigquery_export

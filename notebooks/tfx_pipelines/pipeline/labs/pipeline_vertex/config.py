@@ -40,6 +40,11 @@ class Config:
         f"--region={REGION}",
         "--runner=DataflowRunner",
         "--experiments=use_runner_v2",
+        "--prebuild_sdk_container_engine=cloud_build",
+        f"--docker_registry_push_url=gcr.io/{PROJECT_ID}/dataflow-container",
+        "--cloud_build_machine_type=e2-highcpu-32",
+        "--worker_machine_type=e2-standard-2",
+        "",
     ]
 
     ENABLE_CACHE = bool(os.getenv("ENABLE_CACHE", "False"))
